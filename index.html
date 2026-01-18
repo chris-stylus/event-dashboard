@@ -83,6 +83,7 @@
             height: 100%;
             overflow-y: auto;
             padding-bottom: 2rem;
+            scroll-behavior: smooth;
         }
 
         .stall-inventory-card {
@@ -93,14 +94,7 @@
         }
 
         ::-webkit-scrollbar {
-            width: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: rgba(255,255,255,0.05);
-        }
-        ::-webkit-scrollbar-thumb {
-            background: rgba(255,255,255,0.2);
-            border-radius: 10px;
+            width: 0px; /* Hide scrollbar for a cleaner look on big screens */
         }
     </style>
 </head>
@@ -173,7 +167,6 @@
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, onSnapshot, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Parity with main site config, with environment check
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
             apiKey: "AIzaSyCsuWEjnrYr1g7ruvZ60ur6TADzbHkJpno",
             authDomain: "qr-wallet-2ef48.firebaseapp.com",
@@ -192,27 +185,25 @@
         let timerSeconds = 10;
         let stallData = [];
         let dashboardStarted = false;
+        let isScrolling = false;
+        let scrollInterval;
 
-        // Exact collection references
         const txRef = collection(db, 'artifacts', appId, 'public', 'data', 'transactions');
         const stallsRef = collection(db, 'artifacts', appId, 'public', 'data', 'stalls');
         const configRef = doc(db, 'artifacts', appId, 'public', 'data', 'eventConfig', 'config');
 
-        // Authentication Handler with Fallback
         async function authenticate() {
             try {
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                     try {
                         await signInWithCustomToken(auth, __initial_auth_token);
                     } catch (tokenError) {
-                        console.warn("Custom token failed, trying anonymous:", tokenError);
                         await signInAnonymously(auth);
                     }
                 } else {
                     await signInAnonymously(auth);
                 }
             } catch (error) {
-                console.error("Authentication totally failed:", error);
                 document.getElementById('lastUpdate').textContent = "Connection Error";
             }
         }
@@ -225,47 +216,83 @@
         });
 
         function startDashboard() {
-            // Config listener
             onSnapshot(configRef, (docSnap) => {
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     document.getElementById('schoolName').textContent = data.schoolName || 'UDAYA PUBLIC SCHOOL';
                 }
-            }, (err) => console.error("Config fetch error:", err));
+            });
 
-            // Transactions listener
             onSnapshot(txRef, (snapshot) => {
                 const transactions = [];
                 snapshot.forEach(doc => transactions.push(doc.data()));
                 processAndRenderLeaderboard(transactions);
                 document.getElementById('lastUpdate').textContent = `Last Update: ${new Date().toLocaleTimeString()}`;
-            }, (err) => {
-                console.error("Tx sync error:", err);
-                document.getElementById('stallLeaderboard').innerHTML = '<p class="text-red-400">Syncing sales failed...</p>';
             });
 
-            // Stalls listener
             onSnapshot(stallsRef, (snapshot) => {
                 stallData = [];
                 snapshot.forEach(doc => stallData.push({ id: doc.id, ...doc.data() }));
                 renderInventory(stallData);
-            }, (err) => {
-                console.error("Stall sync error:", err);
-                document.getElementById('inventoryGrid').innerHTML = '<p class="text-red-400">Syncing stalls failed...</p>';
             });
 
-            setInterval(handleRotation, 1000);
+            // Start the main cycle logic
+            runMainCycle();
         }
 
-        function handleRotation() {
-            timerSeconds--;
-            document.getElementById('rotationTimer').textContent = `${timerSeconds}s`;
-
-            if (timerSeconds <= 0) {
-                currentViewIndex = currentViewIndex === 0 ? 1 : 0;
-                timerSeconds = 10;
+        /**
+         * Orchestrates the switching between Leaderboard and Inventory
+         */
+        async function runMainCycle() {
+            while (true) {
+                // Phase 1: Show Leaderboard
+                currentViewIndex = 0;
                 updateViewUI();
+                timerSeconds = 10;
+                while (timerSeconds > 0) {
+                    document.getElementById('rotationTimer').textContent = `${timerSeconds}s`;
+                    await new Promise(r => setTimeout(r, 1000));
+                    timerSeconds--;
+                }
+
+                // Phase 2: Show Inventory and Auto-Scroll
+                currentViewIndex = 1;
+                updateViewUI();
+                document.getElementById('rotationTimer').textContent = "SCROLLING";
+                
+                // Wait 2 seconds for eyes to adjust to the top
+                await new Promise(r => setTimeout(r, 2000));
+                
+                await autoScrollInventory();
+                
+                // Wait 2 seconds at the bottom
+                await new Promise(r => setTimeout(r, 2000));
             }
+        }
+
+        /**
+         * Smoothly scrolls the inventory grid to the bottom
+         */
+        function autoScrollInventory() {
+            return new Promise((resolve) => {
+                const grid = document.getElementById('inventoryGrid');
+                if (!grid) return resolve();
+                
+                grid.scrollTop = 0; // Reset to top
+                
+                const scrollStep = 1.5; // Pixels per interval
+                const intervalTime = 20; // ms between steps
+                
+                const scrollTask = setInterval(() => {
+                    // If we've reached the bottom
+                    if (grid.scrollTop + grid.clientHeight >= grid.scrollHeight - 5) {
+                        clearInterval(scrollTask);
+                        resolve();
+                    } else {
+                        grid.scrollTop += scrollStep;
+                    }
+                }, intervalTime);
+            });
         }
 
         function updateViewUI() {
@@ -385,7 +412,6 @@
             }).join('');
         }
 
-        // Initialize Authentication
         authenticate();
     </script>
 </body>
