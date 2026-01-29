@@ -13,12 +13,12 @@
             color: #0f172a;
             overflow: hidden;
             height: 100vh;
-            /* Richer & Darker Rainbow RGB Palette */
+            /* Vibrant Rainbow RGB Palette Animation - Light Mode */
             background: linear-gradient(-45deg, 
-                #f8717144, #fb923c44, #fbbf2444, #34d39944, #60a5fa44, #818cf844, #f472b644
+                #ffadad44, #ffd6a544, #fdffb644, #caffbf44, #9bf6ff44, #a0c4ff44, #bdb2ff44, #ffc6ff44
             );
             background-size: 400% 400%;
-            animation: gradientBG 12s ease-in-out infinite;
+            animation: gradientBG 10s ease-in-out infinite;
         }
 
         @keyframes gradientBG {
@@ -147,6 +147,29 @@
             border-radius: 2rem;
             border: 1px solid rgba(255, 255, 255, 1);
             padding: 2rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stall-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid #f1f5f9;
+            padding-bottom: 1rem;
+            gap: 1rem;
+        }
+
+        .stall-title {
+            font-size: 1.875rem;
+            line-height: 2.25rem;
+            font-weight: 900;
+            color: #0f172a;
+            /* Allow wrapping instead of truncation */
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            flex: 1;
         }
 
         ::-webkit-scrollbar { width: 0px; }
@@ -402,7 +425,7 @@
                         <div class="flex-grow">
                             <div class="flex justify-between items-end mb-2">
                                 <span class="text-2xl font-black truncate text-slate-900">${label}</span>
-                                <span class="text-xl font-black ${isCurrency ? 'text-blue-700' : 'text-emerald-700'}">${isCurrency ? 'Active Performance' : value+' sold'}</span>
+                                <span class="text-xl font-black ${isCurrency ? 'text-emerald-700' : 'text-blue-700'}">${isCurrency ? 'Active Performance' : value+' sold'}</span>
                             </div>
                             <div class="w-full bg-slate-200 rounded-full h-2.5">
                                 <div class="h-2.5 rounded-full ${isCurrency ? 'bg-emerald-500' : 'bg-blue-600'} shadow-md" style="width: ${(value/maxVal)*100}%"></div>
@@ -419,9 +442,9 @@
                 const menuItems = stall.menu || [];
                 return `
                     <div class="stall-inventory-card">
-                        <div class="flex justify-between items-center mb-6 border-b-2 border-slate-100 pb-4">
-                            <h4 class="text-3xl font-black text-slate-900 truncate">${stall.name}</h4>
-                            <span class="text-xs px-3 py-1 bg-slate-900 rounded-lg text-white font-black uppercase tracking-widest">${stall.category || 'General'}</span>
+                        <div class="stall-header">
+                            <h4 class="stall-title">${stall.name}</h4>
+                            <span class="flex-shrink-0 text-xs px-3 py-1 bg-slate-900 rounded-lg text-white font-black uppercase tracking-widest">${stall.category || 'General'}</span>
                         </div>
                         <div class="space-y-4">
                             ${menuItems.map(item => {
